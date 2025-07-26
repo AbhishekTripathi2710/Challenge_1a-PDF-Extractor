@@ -9,13 +9,23 @@ const outputDir = './output';
 async function processAllPdfs() {
   const files = fs.readdirSync(inputDir).filter(f => f.endsWith('.pdf'));
   for (const file of files) {
+    const startTime = Date.now();
     const pdfPath = path.join(inputDir, file);
     const content = await extractPdfContent(pdfPath);
-    const { title, outline } = detectOutline(content);
-    const output = { title, outline };
+    const { title, outline, language } = detectOutline(content);
+    const output = { 
+      title, 
+      outline,
+      language,
+      metadata: {
+        detectedLanguage: language,
+        totalHeadings: outline.length,
+        processingTime: Date.now() - startTime
+      }
+    };
     const outPath = path.join(outputDir, file.replace('.pdf', '.json'));
     fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
-    console.log(`Processed: ${file}`);
+    console.log(`Processed: ${file} (Language: ${language}, Headings: ${outline.length})`);
   }
 }
 

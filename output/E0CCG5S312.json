@@ -81,5 +81,11 @@
       "text": "4.2 Documents and Web Sites",
       "page": 11
     }
-  ]
+  ],
+  "language": "en",
+  "metadata": {
+    "detectedLanguage": "en",
+    "totalHeadings": 16,
+    "processingTime": 334
+  }
 }

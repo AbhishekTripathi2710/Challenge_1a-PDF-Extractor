@@ -15,6 +15,20 @@ The extractor works in several steps:
    - Only meaningful headings are included in the outline; form fields and irrelevant lines are filtered out.
 5. **Output:** The result is a JSON file for each PDF, containing the title and a clean, hierarchical outline.
 
+## Multilingual Support
+This solution supports multiple languages including:
+- **English** (default)
+- **Japanese** (日本語) - Hiragana, Katakana, Kanji
+- **Chinese** (中文) - Simplified and Traditional
+- **Korean** (한국어) - Hangul
+- **Arabic** (العربية)
+- **Russian** (Русский) - Cyrillic
+
+The system automatically detects the document language and applies appropriate heading patterns and section names for each language. For example:
+- Japanese documents will recognize headings like "1. はじめに" and sections like "目次" (Table of Contents)
+- Chinese documents will detect "1. 引言" and "目录" (Table of Contents)
+- Korean documents will identify "1. 서론" and "목차" (Table of Contents)
+
 ## Models and Libraries Used
 - **[pdfjs-dist](https://www.npmjs.com/package/pdfjs-dist):** Used for parsing and extracting text and layout information from PDFs.
 - **Node.js:** The solution is implemented in JavaScript for portability and ease of use.
@@ -38,6 +52,7 @@ docker run --rm -v $(pwd)/input:/app/input -v $(pwd)/output:/app/output --networ
 ```
 - All PDFs in `input/` will be processed.
 - For each `filename.pdf`, a corresponding `filename.json` will be created in `output/`.
+- The output includes language detection and metadata.
 
 ### Expected Execution
 This solution is designed to work with the following command (as per the challenge instructions):
@@ -45,8 +60,29 @@ This solution is designed to work with the following command (as per the challen
 docker run --rm -v $(pwd)/input:/app/input -v $(pwd)/output:/app/output --network none mysolutionname:somerandomidentifier
 ```
 
+## Output Format
+The JSON output includes:
+```json
+{
+  "title": "Document Title",
+  "outline": [
+    { "level": "H1", "text": "Section 1", "page": 1 },
+    { "level": "H2", "text": "Subsection 1.1", "page": 2 }
+  ],
+  "language": "en",
+  "metadata": {
+    "detectedLanguage": "en",
+    "totalHeadings": 5,
+    "processingTime": 1234
+  }
+}
+```
+
 ## Notes
 - The solution is fully offline and does not require any network access.
 - It is optimized for speed and should process a 50-page PDF in under 10 seconds on a typical CPU.
+- Language detection is automatic and supports 6 major languages.
+- If you encounter any issues with specific PDFs, check the logs or try adjusting the heading detection heuristics in `src/headingDetector.js`.
 
 ---
+

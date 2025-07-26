@@ -19,6 +19,57 @@ function groupItemsIntoLines(items, yThreshold = 2) {
   return lines.sort((a, b) => b.y - a.y);
 }
 
+function detectLanguage(text) {
+  const japanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/; 
+  const chinese = /[\u4E00-\u9FFF]/; 
+  const korean = /[\uAC00-\uD7AF]/; 
+  const arabic = /[\u0600-\u06FF]/; 
+  const cyrillic = /[\u0400-\u04FF]/; 
+  
+  if (japanese.test(text)) return 'ja';
+  if (chinese.test(text)) return 'zh';
+  if (korean.test(text)) return 'ko';
+  if (arabic.test(text)) return 'ar';
+  if (cyrillic.test(text)) return 'ru';
+  return 'en'; 
+}
+
+function getHeadingPatterns(language) {
+  const patterns = {
+    en: {
+      h1: /^[0-9]+\.\s+[A-Z]/,
+      h2: /^[0-9]+\.[0-9]+\s+[A-Z]/,
+      h3: /^[0-9]+\.[0-9]+\.[0-9]+\s+[A-Z]/
+    },
+    ja: {
+      h1: /^[0-9]+\.\s*[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/, 
+      h2: /^[0-9]+\.[0-9]+\s*[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/,
+      h3: /^[0-9]+\.[0-9]+\.[0-9]+\s*[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/
+    },
+    zh: {
+      h1: /^[0-9]+\.\s*[\u4E00-\u9FFF]/,
+      h2: /^[0-9]+\.[0-9]+\s*[\u4E00-\u9FFF]/,
+      h3: /^[0-9]+\.[0-9]+\.[0-9]+\s*[\u4E00-\u9FFF]/
+    },
+    ko: {
+      h1: /^[0-9]+\.\s*[\uAC00-\uD7AF]/,
+      h2: /^[0-9]+\.[0-9]+\s*[\uAC00-\uD7AF]/,
+      h3: /^[0-9]+\.[0-9]+\.[0-9]+\s*[\uAC00-\uD7AF]/
+    },
+    ar: {
+      h1: /^[0-9]+\.\s*[\u0600-\u06FF]/,
+      h2: /^[0-9]+\.[0-9]+\s*[\u0600-\u06FF]/,
+      h3: /^[0-9]+\.[0-9]+\.[0-9]+\s*[\u0600-\u06FF]/
+    },
+    ru: {
+      h1: /^[0-9]+\.\s*[\u0400-\u04FF]/,
+      h2: /^[0-9]+\.[0-9]+\s*[\u0400-\u04FF]/,
+      h3: /^[0-9]+\.[0-9]+\.[0-9]+\s*[\u0400-\u04FF]/
+    }
+  };
+  return patterns[language] || patterns.en;
+}
+
 function isLikelyHeading(text) {
   const minWords = 2;
   const minChars = 10;
@@ -35,9 +86,16 @@ function isFormField(text) {
   return /Name|Date|Age|Signature|Designation|Relationship|Service Book|advance required|PAY|permanent|temporary|Home Town|LTC|block|fare|bus|rail|S.No|Persons in respect|undertake|declare|tickets|refund|sum|receipt|amount|Rs\.|India|place to be visited|Block for which to be availed|headquarters|route|availing|entitled|employed|wife|husband|concession|availing|block|visiting|so whether entitled|produce the tickets|cancellation|journey|above are true|correct to the best|knowledge|one lump sum/i.test(text);
 }
 
-function isKnownSection(text) {
-  const trimmed = text.trim();
-  return /^(Acknowledgements|Revision History|Table of Contents|References|Abstract|Introduction|Conclusion|Bibliography|Appendix|Business Outcomes)$/i.test(trimmed);
+function isKnownSection(text, language = 'en') {
+  const sections = {
+    en: /^(Acknowledgements|Revision History|Table of Contents|References|Abstract|Introduction|Conclusion|Bibliography|Appendix|Business Outcomes)$/i,
+    ja: /^(謝辞|改訂履歴|目次|参考文献|要約|序論|結論|参考文献|付録|ビジネス成果)$/i,
+    zh: /^(致谢|修订历史|目录|参考文献|摘要|引言|结论|参考文献|附录|业务成果)$/i,
+    ko: /^(감사의 글|개정 이력|목차|참고 문헌|초록|서론|결론|참고 문헌|부록|비즈니스 성과)$/i,
+    ar: /^(شكر|تاريخ المراجعة|جدول المحتويات|المراجع|ملخص|مقدمة|خاتمة|قائمة المراجع|ملحق|النتائج التجارية)$/i,
+    ru: /^(Благодарности|История изменений|Содержание|Ссылки|Аннотация|Введение|Заключение|Библиография|Приложение|Бизнес-результаты)$/i
+  };
+  return sections[language] ? sections[language].test(text.trim()) : sections.en.test(text.trim());
 }
 
 function isNumberedListItem(text) {
@@ -101,6 +159,7 @@ function isYearOrNumber(text) {
 function detectOutline(pages) {
   let allLines = [];
   let title = '';
+  
   pages.forEach(page => {
     const lines = groupItemsIntoLines(page.items);
     lines.forEach(line => {
@@ -115,23 +174,34 @@ function detectOutline(pages) {
       });
     });
   });
+  
+  
+  const sampleText = allLines.slice(0, 20).map(l => l.text).join(' ');
+  const language = detectLanguage(sampleText);
+  
+  
+  const headingPatterns = getHeadingPatterns(language);
+  
   const fontSizes = [...new Set(allLines.map(l => l.fontSize))].sort((a, b) => b - a);
   const [h1Size, h2Size, h3Size] = fontSizes;
+  
   const titleLines = allLines.filter(l =>
     l.pageNum <= 2 &&
     l.fontSize === h1Size &&
     l.text.length > 2 &&
     !isJunkLine(l.text) &&
-    !isKnownSection(l.text)
+    !isKnownSection(l.text, language)
   );
   const titleLineKeys = new Set(titleLines.map(l => l.text + '|' + l.pageNum));
   title = titleLines.map(l => l.text).join(' ').replace(/\s+/g, ' ').trim();
-  if (!/[a-zA-Z0-9]/.test(title)) title = '';
+  if (!/[a-zA-Z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\uAC00-\uD7AF\u0600-\u06FF\u0400-\u04FF]/.test(title)) title = '';
+  
   const fontSizeCounts = {};
   allLines.forEach(l => {
     fontSizeCounts[l.fontSize] = (fontSizeCounts[l.fontSize] || 0) + 1;
   });
   const bodyFontSize = parseFloat(Object.entries(fontSizeCounts).sort((a, b) => b[1] - a[1])[0][0]);
+  
   let outline = [];
   allLines.forEach(line => {
     if (line.text.length < 3 || isFormField(line.text) || isJunkLine(line.text) || isUrl(line.text) || isYearOrNumber(line.text)) return;
@@ -139,24 +209,23 @@ function detectOutline(pages) {
     if (isNumberedListItem(line.text)) return;
     if (isVersionNumber(line.text) || isTableRow(line.text)) return;
     if (isIncompleteFragment(line.text)) return;
-    const h1Pattern = /^\d+\.\s+[A-Z]/;
-    const h2Pattern = /^\d+\.\d+\s+[A-Z]/;
-    const h3Pattern = /^\d+\.\d+\.\d+\s+[A-Z]/;
+    
     const splitHeadings = splitMultipleHeadings(line.text);
     splitHeadings.forEach(headingText => {
       let level = null;
       headingText = headingText.trim();
-      if (h3Pattern.test(headingText)) {
+      
+      
+      if (headingPatterns.h3.test(headingText)) {
         level = 'H3';
-      } else if (h2Pattern.test(headingText)) {
+      } else if (headingPatterns.h2.test(headingText)) {
         level = 'H2';
-      } else if (h1Pattern.test(headingText)) {
+      } else if (headingPatterns.h1.test(headingText)) {
         level = 'H1';
-      } else if (isKnownSection(headingText)) {
+      } else if (isKnownSection(headingText, language)) {
         level = 'H1';
       } else {
         if (line.fontSize > bodyFontSize && 
-            /^[A-Z]/.test(headingText) &&
             headingText.length >= 5 &&
             headingText.length <= 100 &&
             !/\d{4}/.test(headingText) &&
@@ -166,6 +235,7 @@ function detectOutline(pages) {
           else if (line.fontSize === h3Size) level = 'H3';
         }
       }
+      
       if (level) {
         outline.push({
           level,
@@ -175,6 +245,7 @@ function detectOutline(pages) {
       }
     });
   });
+  
   const seen = new Set();
   outline = outline.filter(h => {
     const key = h.text + '|' + h.page;
@@ -182,14 +253,17 @@ function detectOutline(pages) {
     seen.add(key);
     return true;
   });
+  
   outline.sort((a, b) => a.page - b.page);
+  
   const filteredOutline = outline.filter(h =>
     h.text.length > 3 && !isFormField(h.text)
   );
+  
   if (filteredOutline.length === 0) {
-    return { title, outline: [] };
+    return { title, outline: [], language };
   }
-  return { title, outline: filteredOutline };
+  return { title, outline: filteredOutline, language };
 }
 
 module.exports = { detectOutline };
