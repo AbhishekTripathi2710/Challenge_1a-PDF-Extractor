@@ -11,5 +11,11 @@
       "text": "REGULAR PATHWAY DISTINCTION PATHWAY",
       "page": 0
     }
-  ]
+  ],
+  "language": "en",
+  "metadata": {
+    "detectedLanguage": "en",
+    "totalHeadings": 2,
+    "processingTime": 51
+  }
 }

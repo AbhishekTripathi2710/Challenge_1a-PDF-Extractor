@@ -121,5 +121,11 @@
       "text": "4. Journals, books, maps, music etc.",
       "page": 13
     }
-  ]
+  ],
+  "language": "en",
+  "metadata": {
+    "detectedLanguage": "en",
+    "totalHeadings": 24,
+    "processingTime": 179
+  }
 }

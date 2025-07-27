@@ -6,5 +6,11 @@
       "text": "HOPE To SEE You THERE !",
       "page": 0
     }
-  ]
+  ],
+  "language": "en",
+  "metadata": {
+    "detectedLanguage": "en",
+    "totalHeadings": 1,
+    "processingTime": 29
+  }
 }
